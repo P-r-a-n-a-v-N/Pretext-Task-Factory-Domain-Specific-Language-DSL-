@@ -1,0 +1,103 @@
+cabal-version:      3.0
+name:               pretext-task-factory
+version:            1.0.0
+synopsis:
+  A Domain-Specific Language for Defining and Verifying
+  Self-Supervised Learning Pretext Tasks
+description:
+  Pretext Task Factory provides a type-safe embedded DSL (EDSL) in
+  Haskell for declaratively defining, composing, verifying, and
+  executing Self-Supervised Learning (SSL) pretext tasks.
+  .
+  Features include:
+  .
+  * Algebraic data type representation of pretext tasks
+  * Semigroup/Monoid composition of transformation pipelines
+  * Smart constructors with validation for all task parameters
+  * Interpretation / execution on images and temporal sequences
+  * Static and dynamic verification engine
+  * Algebraic optimizer with rewrite rules (rotation fusion, etc.)
+  * Random valid DSL program generator
+  * Multiple pretty-printing formats (infix, tree, JSON, execution log)
+homepage:           https://github.com/yourusername/pretext-task-factory
+bug-reports:        https://github.com/yourusername/pretext-task-factory/issues
+license:            MIT
+license-file:       LICENSE
+author:             Your Name
+maintainer:         your.email@example.com
+copyright:          2025 Your Name
+category:           Machine Learning, DSL, Language
+build-type:         Simple
+extra-doc-files:    README.md
+                    CHANGELOG.md
+tested-with:        GHC == 9.4.8, GHC == 9.6.4, GHC == 9.8.2
+
+-- ---------------------------------------------------------------------------
+-- Common warnings (shared by all components)
+-- ---------------------------------------------------------------------------
+
+common warnings
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Widentities
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -fhide-source-paths
+
+-- ---------------------------------------------------------------------------
+-- Library
+-- ---------------------------------------------------------------------------
+
+library
+  import:             warnings
+  default-language:   Haskell2010
+  hs-source-dirs:     src
+  ghc-options:
+    -Wmissing-export-lists
+  exposed-modules:
+    Types
+    DSL
+    Interpreter
+    Verifier
+    Optimizer
+    PrettyPrint
+    Generator
+  build-depends:
+    base >= 4.16 && < 5
+
+-- ---------------------------------------------------------------------------
+-- Executable
+-- ---------------------------------------------------------------------------
+
+executable pretext-task-factory
+  import:             warnings
+  default-language:   Haskell2010
+  main-is:            Main.hs
+  hs-source-dirs:     app
+  build-depends:
+      base                 >= 4.16 && < 5
+    , pretext-task-factory
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
+
+-- ---------------------------------------------------------------------------
+-- Test suite
+-- ---------------------------------------------------------------------------
+
+test-suite pretext-task-factory-test
+  import:             warnings
+  default-language:   Haskell2010
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  hs-source-dirs:     test
+  build-depends:
+      base                 >= 4.16 && < 5
+    , pretext-task-factory
+  ghc-options:
+    -threaded
+    -rtsopts
+    -with-rtsopts=-N
