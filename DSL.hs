@@ -72,12 +72,19 @@ data PretextTask
 
 -- | Sequential composition: @a <> b@ means "apply a, then apply b".
 --   This makes 'PretextTask' a natural 'Semigroup'.
+--
+-- Optimization: Identity acts as a unit, allowing us to flatten the AST.
 instance Semigroup PretextTask where
-  Identity <> b        = b
-  a        <> Identity = a
-  a        <> b        = Seq a b
+  Identity <> b = b
+  a <> Identity = a
+  a <> b        = Seq a b
 
 -- | 'Identity' is the neutral element for sequential composition.
+--
+-- The Monoid laws are satisfied:
+--   - Left identity:  @mempty <> a = a@
+--   - Right identity: @a <> mempty = a@
+--   - Associativity:  @(a <> b) <> c = a <> (b <> c)@ (via 'Seq' structure)
 instance Monoid PretextTask where
   mempty = Identity
 
@@ -129,10 +136,16 @@ identity :: PretextTask
 identity = Identity
 
 -- | Explicit sequential composition (same as '<>').
+--
+-- This is provided for users who prefer explicit naming over operators.
 sequential :: PretextTask -> PretextTask -> PretextTask
 sequential = (<>)
 
 -- | Parallel composition: apply both tasks independently to the same input.
+--
+-- Usage:
+-- >>> parallel (rotate Rotate90) (rotate Rotate180)
+-- (rotate(90°) ‖ rotate(180°))
 parallel :: PretextTask -> PretextTask -> PretextTask
 parallel = Par
 
@@ -141,6 +154,9 @@ parallel = Par
 -- ---------------------------------------------------------------------------
 
 -- | The maximum depth of the task expression tree.
+--
+-- Identity nodes have depth 0, leaf tasks have depth 1,
+-- and composite nodes add 1 to the max depth of their children.
 --
 -- >>> taskDepth (rotate Rotate90 <> rotate Rotate180)
 -- 2
@@ -154,6 +170,9 @@ taskDepth (Par a b)     = 1 + max (taskDepth a) (taskDepth b)
 
 -- | Total number of leaf tasks (excluding Identity nodes).
 --
+-- This counts only non-identity transformations and does not count
+-- intermediate Seq/Par nodes.
+--
 -- >>> taskCount (rotate Rotate90 <> rotate Rotate180)
 -- 2
 taskCount :: PretextTask -> Int
@@ -164,9 +183,18 @@ taskCount (TimeWarp _)  = 1
 taskCount (Seq a b)     = taskCount a + taskCount b
 taskCount (Par a b)     = taskCount a + taskCount b
 
--- | 'True' iff the task is semantically equivalent to 'Identity'
---   (i.e., it is an 'Identity' node, a sequence of identities, or
---   a rotation by 0°).
+-- | 'True' iff the task is semantically equivalent to 'Identity'.
+--
+-- This checks if the task:
+--   * Is an explicit 'Identity' constructor
+--   * Is a zero-degree rotation ('Rotate Rotate0')
+--   * Is a sequence of tasks that are all identities
+--   * Is a parallel composition of tasks that are all identities
+--
+-- >>> isIdentity (rotate Rotate0)
+-- True
+-- >>> isIdentity (rotate Rotate90)
+-- False
 isIdentity :: PretextTask -> Bool
 isIdentity Identity          = True
 isIdentity (Rotate Rotate0)  = True
@@ -175,6 +203,13 @@ isIdentity (Par a b)         = isIdentity a && isIdentity b
 isIdentity _                 = False
 
 -- | A short human-readable label for the top-level constructor.
+--
+-- This is useful for debugging and display purposes.
+--
+-- >>> taskLabel (rotate Rotate90)
+-- "Rotate"
+-- >>> taskLabel (rotate Rotate90 <> rotate Rotate180)
+-- "Sequential"
 taskLabel :: PretextTask -> String
 taskLabel (Rotate  _) = "Rotate"
 taskLabel (Permute _) = "Permute"
