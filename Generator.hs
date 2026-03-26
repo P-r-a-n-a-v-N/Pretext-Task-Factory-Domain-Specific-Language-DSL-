@@ -23,7 +23,7 @@ module Generator
   , randomTask
   , randomLeaf
   , randomRotation
-  , randomPermutation
+  , randomPermutationTask
   , randomTimeWarp
   , randomPipeline
 
@@ -116,8 +116,8 @@ randomRotation = do
   return (rotate ang)
 
 -- | Generate a random permutation task of size between 2 and maxSz.
-randomPermutation :: Int -> Gen (Either DSLError PretextTask)
-randomPermutation maxSz = do
+randomPermutationTask :: Int -> Gen (Either DSLError PretextTask)
+randomPermutationTask maxSz = do
   sz <- randInt 2 (max 2 maxSz)
   indices <- randPermutation sz
   return (permute indices)
@@ -136,7 +136,7 @@ randomLeaf maxPermSize = do
   case choice of
     0 -> randomRotation
     1 -> do
-      r <- randomPermutation maxPermSize
+      r <- randomPermutationTask maxPermSize
       case r of
         Right t -> return t
         Left  _ -> randomRotation   -- fallback
