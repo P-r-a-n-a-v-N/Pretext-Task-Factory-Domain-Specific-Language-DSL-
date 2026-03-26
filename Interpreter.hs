@@ -102,8 +102,8 @@ applyRotation ang       (ImageSample m) =
 rotateMatrix :: RotationAngle -> Image a -> Image a
 rotateMatrix Rotate0   m = m
 rotateMatrix Rotate90  m = (map reverse . transpose) m
-rotateMatrix Rotate180 m = (map reverse . reverse) m
-rotateMatrix Rotate270 m = (reverse . transpose) m
+rotateMatrix Rotate180 m = (map reverse . map reverse) m
+rotateMatrix Rotate270 m = (transpose . map reverse) m
 
 -- ---------------------------------------------------------------------------
 -- Permutation
@@ -128,10 +128,15 @@ applyPermutation perm (SeqSample xs) =
             ("Permutation size " ++ show pSz ++
              " exceeds sequence length " ++ show n)
      else
-       -- Apply to the first pSz elements; leave the tail untouched
-       let (prefix, suffix) = splitAt pSz xs
-           permuted = map (prefix !!) idxs
-       in Right $ SeqSample (permuted ++ suffix)
+       -- Validate all indices are within bounds
+       if any (>= length xs) idxs || any (< 0) idxs
+       then Left $ PermutationOutOfRange
+              ("Permutation contains out-of-range indices")
+       else
+         -- Apply to the first pSz elements; leave the tail untouched
+         let (prefix, suffix) = splitAt pSz xs
+             permuted = map (prefix !!) idxs
+         in Right $ SeqSample (permuted ++ suffix)
 
 applyPermutation perm (ImageSample rows) =
   let n    = length rows
@@ -142,9 +147,14 @@ applyPermutation perm (ImageSample rows) =
             ("Permutation size " ++ show pSz ++
              " exceeds number of image rows " ++ show n)
      else
-       let (prefix, suffix) = splitAt pSz rows
-           permuted = map (prefix !!) idxs
-       in Right $ ImageSample (permuted ++ suffix)
+       -- Validate all indices are within bounds
+       if any (>= length rows) idxs || any (< 0) idxs
+       then Left $ PermutationOutOfRange
+              ("Permutation contains out-of-range indices")
+       else
+         let (prefix, suffix) = splitAt pSz rows
+             permuted = map (prefix !!) idxs
+         in Right $ ImageSample (permuted ++ suffix)
 
 -- ---------------------------------------------------------------------------
 -- TimeWarp
@@ -186,10 +196,12 @@ applyTimeWarp wf (ImageSample rows) =
 --   sampling the source at evenly spaced positions.
 nearestNeighbour :: [a] -> Int -> [a]
 nearestNeighbour [] _      = []
-nearestNeighbour src newLen =
-  let n   = length src
-      arr = src   -- O(n) index; fine for demo-scale data
-      idx i = let pos = (fromIntegral i * fromIntegral n)
-                         / fromIntegral newLen :: Double
-              in arr !! min (n - 1) (floor pos)
-  in map idx [0 .. newLen - 1]
+nearestNeighbour src newLen
+  | newLen <= 0 = []
+  | otherwise =
+      let n   = length src
+          arr = src   -- O(n) index; fine for demo-scale data
+          idx i = let pos = (fromIntegral i * fromIntegral n)
+                             / fromIntegral newLen :: Double
+                  in arr !! min (n - 1) (floor pos)
+      in map idx [0 .. newLen - 1]
